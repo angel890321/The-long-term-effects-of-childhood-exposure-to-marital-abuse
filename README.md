@@ -1,5 +1,5 @@
 # 兒少時期曾目睹婚暴暨受虐對青年的長期影響及其危險與保護因子之視覺化分析
-https://docs.google.com/document/d/1gim0WavAzzARcjJV2pGmUont3yMKUnCl/edit?usp=sharing&ouid=100611606736838979912&rtpof=true&sd=true
+https://drive.google.com/file/d/1CWqe5ZMHcvDpdJ73RzyFuB_NZQiMTyUN/view?usp=sharing
 
 ## 1-1 資料介紹
 - 資料集: 兒少時期曾目睹婚暴暨受虐對青年的長期影響及其危險與保護因子
