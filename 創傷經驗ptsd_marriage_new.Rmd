@@ -1,0 +1,276 @@
+---
+title: "創傷經驗量表ptsd"
+date: "2021-05-28"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache=TRUE,
+                      autodep=TRUE, cache.comments=FALSE,
+                      message=FALSE, warning=FALSE)
+```
+
+
+## Structural Equation Modelling
+
+```{r install.packages}
+# install.packages("tidySEM")
+# install.packages("lavaan")
+# install.packages("dplyr")
+library(tidySEM); library(lavaan); library(dplyr); library(ggplot2)
+library(psych) # for parallel analysis
+
+```
+
+```{r input data}
+library(haven)
+library(tidyverse)
+library(dplyr)
+library(car)
+setwd("D:/資料視覺化/期末報告")
+data <- read_sav("D:/資料視覺化/兒少時期曾目睹婚暴/data.sav")
+write.csv(data, file = "D:/資料視覺化/期末報告/raw_data.csv")
+data <- read.csv("D:/資料視覺化/期末報告/raw_data.csv", sep = ',' ,header = T)
+view(data)
+trauma <- subset(data,select=c(sex,family,marriage,income,ptsd1, ptsd2,ptsd3,ptsd4,ptsd5,ptsd6,ptsd7,ptsd8,ptsd9,
+                                   ptsd10, ptsd11, ptsd12, ptsd13, ptsd14, ptsd15, ptsd16,
+                                   ptsd17, ptsd18, ptsd19, ptsd20, ptsd21))
+
+trauma$sex<- as.factor(trauma$sex)
+levels(trauma$sex) <- c("男", "女")
+
+trauma$family<- as.factor(trauma$family)
+levels(trauma$family) <- c("三代同堂", "核心家庭","大家庭","單親家庭","繼親家庭","隔代教養家庭","其他","錯誤值")
+
+trauma$marriage<- as.factor(trauma$marriage)
+levels(trauma$marriage) <- c("維持婚姻並同住", "維持婚姻但分居","離婚","寡居","再婚","其他","錯誤值")
+
+trauma$income<- as.factor(trauma$income)
+levels(trauma$income) <- c("2萬元(含)以下元", "2萬元以上-4萬元","4萬元以上-6萬元","6萬元以上-8萬元","8萬元以上-10萬元","10萬元以上","錯誤值")
+
+#View(trauma)
+
+trauma$ptsd1 <- car::recode(trauma$ptsd1, "8 = NA;9 = NA")
+trauma$ptsd2 <- car::recode(trauma$ptsd2, "8 = NA;9 = NA")
+trauma$ptsd3 <- car::recode(trauma$ptsd3, "8 = NA;9 = NA")
+trauma$ptsd4 <- car::recode(trauma$ptsd4, "8 = NA;9 = NA")
+trauma$ptsd5 <- car::recode(trauma$ptsd5, "8 = NA;9 = NA")
+trauma$ptsd6 <- car::recode(trauma$ptsd6, "8 = NA;9 = NA")
+trauma$ptsd7 <- car::recode(trauma$ptsd7, "8 = NA;9 = NA")
+trauma$ptsd8 <- car::recode(trauma$ptsd8, "8 = NA;9 = NA")
+trauma$ptsd9 <- car::recode(trauma$ptsd9, "8 = NA;9 = NA")
+trauma$ptsd10 <- car::recode(trauma$ptsd10, "8 = NA;9 = NA")
+trauma$ptsd11 <- car::recode(trauma$ptsd11, "8 = NA;9 = NA")
+trauma$ptsd12 <- car::recode(trauma$ptsd12, "8 = NA;9 = NA")
+trauma$ptsd13 <- car::recode(trauma$ptsd13, "8 = NA;9 = NA")
+trauma$ptsd14 <- car::recode(trauma$ptsd14, "8 = NA;9 = NA")
+trauma$ptsd15 <- car::recode(trauma$ptsd15, "8 = NA;9 = NA")
+trauma$ptsd16 <- car::recode(trauma$ptsd16, "8 = NA;9 = NA")
+trauma$ptsd17 <- car::recode(trauma$ptsd17, "8 = NA;9 = NA")
+trauma$ptsd18 <- car::recode(trauma$ptsd18, "8 = NA;9 = NA")
+trauma$ptsd19 <- car::recode(trauma$ptsd19, "8 = NA;9 = NA")
+trauma$ptsd20 <- car::recode(trauma$ptsd20, "8 = NA;9 = NA")
+trauma$ptsd21 <- car::recode(trauma$ptsd21, "8 = NA;9 = NA")
+### 刪除錯誤值
+trauma <- subset(trauma,trauma$family!='錯誤值'&trauma$family!='其他
+                 '&trauma$marriage!='錯誤值'&trauma$marriage!='其他'
+                 &trauma$income!='錯誤值')
+
+View(trauma)
+write.csv(trauma,file="trauma.csv",row.names = F)
+ptsd <- subset(trauma, select=c(ptsd1, ptsd2,ptsd3,ptsd4,ptsd5,ptsd6,ptsd7,ptsd8,ptsd9,
+                                   ptsd10, ptsd11, ptsd12, ptsd13, ptsd14, ptsd15, ptsd16,
+                                   ptsd17, ptsd18, ptsd19, ptsd20, ptsd21))
+
+```
+
+```{r efa.PD}
+fa.parallel(ptsd, fa = "fa", fm = "ml")
+ptsd.efa <- fa(ptsd, nfactors = 4, rotate = "Promax",
+            residuals = TRUE, SMC = TRUE, fm = "pa")
+ptsd.efa$loadings
+fa.diagram(ptsd.efa)
+```
+
+
+```{r cfa.mardia}
+mardia(ptsd)
+```
+
+
+```{r cfa.PD}
+PTSD.model <- '
+    passive_attitude =~ ptsd10+ptsd11+ptsd14+ptsd19+ptsd21
+    physical_and_mental_symptom =~ ptsd1+ptsd4+ptsd7+ptsd8+ptsd9+ptsd12+ptsd13+ptsd15+ptsd16+ptsd17
+    repeated_experience =~ ptsd2+ptsd3+ptsd5+ptsd6+ptsd18+ptsd20
+'
+# the default for cfa is ML
+PTSD.cfa <- cfa(PTSD.model, data = ptsd,
+              estimator = "WLSMV")
+summary(PTSD.cfa, fit.measures = T,standardized = TRUE)
+
+lay1 <- get_layout("passive_attitude", "", "", "","","","","","","repeated_experience","","","","ptsd2","ptsd3","",
+"", "", "", "physical_and_mental_symptom", "", "","","", "","","","","ptsd5","ptsd6",
+"ptsd10", "ptsd11", "ptsd14", "ptsd19", "ptsd21","", "", "", "", "","","","","ptsd18","ptsd20",
+"", "", "","","", "ptsd1", "ptsd4", "ptsd7", "ptsd8", "ptsd9","ptsd12","ptsd13","ptsd15","ptsd16","ptsd17",rows = 4)
+graph_sem(PTSD.cfa,layout = lay1)
+ggsave("PTSD_income.png",  # 檔案名稱
+       plot = graph_sem(PTSD.cfa,layout = lay1),   
+       path = "D:/資料視覺化/期末報告", # 檔案路徑，不包含檔名
+       width = 21, # 圖片寬度
+       height = 9, # 圖片長度
+       dpi = 300) # dpi
+```
+
+```{r cfa.ci}
+PTSD.model <- '
+    passive_attitude =~ ptsd10+ptsd11+ptsd14+ptsd19+ptsd21
+    physical_and_mental_symptom =~ ptsd1+ptsd4+ptsd7+ptsd8+ptsd9+ptsd12+ptsd13+ptsd15+ptsd16+ptsd17
+    repeated_experience =~ ptsd2+ptsd3+ptsd5+ptsd6+ptsd18+ptsd20
+'
+# the default for cfa is ML
+
+trauma$marriage <- car::recode(trauma$marriage,"'維持婚姻並同住'='一般婚姻關係'; '維持婚姻但分居'='特殊婚姻關係';'離婚'='特殊婚姻關係';'寡居'='特殊婚姻關係';'再婚'='特殊婚姻關係'")
+
+PTSD.cfa.ci <- cfa(PTSD.model, data = trauma,
+              estimator = "WLSMV",
+              group = "marriage")
+summary(PTSD.cfa.ci, fit.measures = T,standardized = TRUE)
+
+ggsave("PTSD_marriage_ci.png",  # 檔案名稱
+       plot = graph_sem(PTSD.cfa.ci,layout = lay1),   
+       path = "D:/資料視覺化/期末報告", # 檔案路徑，不包含檔名
+       width = 21, # 圖片寬度
+       height = 9, # 圖片長度
+       dpi = 300) # dpi
+```
+```{r cfa.allequal}
+PTSD.cfa.allequal <- cfa(PTSD.model, data = trauma,
+              estimator = "WLSMV",
+              group = "marriage",
+              group.equal = c("loadings", "intercepts", "residuals",
+"lv.variances", "lv.covariances"))
+
+summary(PTSD.cfa.allequal, fit.measures = T,standardized = TRUE)
+
+anova(PTSD.cfa.ci, PTSD.cfa.allequal) 
+# p值為0.5377 > 0.05，表示構造恆等性成立。
+
+
+ggsave("PTSD_marriage_allequal.png",  # 檔案名稱
+       plot = graph_sem(PTSD.cfa.allequal,layout = lay1),   
+       path = "D:/資料視覺化/期末報告", # 檔案路徑，不包含檔名
+       width = 21, # 圖片寬度
+       height = 9, # 圖片長度
+       dpi = 300) # dpi
+```
+
+```{r cfa.mi}
+PTSD.cfa.mi <- cfa(PTSD.model, data = trauma,
+              estimator = "WLSMV",
+              group = "marriage",
+              group.equal = c("loadings"))
+fitMeasures(PTSD.cfa.mi,
+            fit.measures = c("chisq", "df", "pvalue",
+                             "cfi", "tli", "rmsea", 
+                             "rmsea.pvalue", "srmr"))
+summary(PTSD.cfa.mi, fit.measures = TRUE,
+        standardized = TRUE)
+
+
+ggsave("PTSD_marriage_mi.png",  # 檔案名稱
+       plot = graph_sem(PTSD.cfa.mi,layout = lay1),   
+       path = "D:/資料視覺化/期末報告", # 檔案路徑，不包含檔名
+       width = 21, # 圖片寬度
+       height = 9, # 圖片長度
+       dpi = 300) # dpi
+```
+```{r cfa.ci.vs.cfa.mi}
+anova(PTSD.cfa.ci, PTSD.cfa.mi) 
+# p 值為0.4545 > 0.05，表示弱恆等性成立
+```
+
+```{r cfa.si}
+PTSD.cfa.si <- cfa(PTSD.model, data = trauma,
+              estimator = "WLSMV",
+              group = "marriage",
+              group.equal = c("loadings", "intercepts"))
+fitMeasures(PTSD.cfa.si,
+            fit.measures = c("chisq", "df", "pvalue",
+                             "cfi", "tli", "rmsea", 
+                             "rmsea.pvalue", "srmr"))
+summary(PTSD.cfa.si, fit.measures = TRUE,
+        standardized = TRUE)
+
+
+ggsave("PTSD_marriage_si.png",  # 檔案名稱
+       plot = graph_sem(PTSD.cfa.si,layout = lay1),   
+       path = "D:/資料視覺化/期末報告", # 檔案路徑，不包含檔名
+       width = 21, # 圖片寬度
+       height = 9, # 圖片長度
+       dpi = 300) # dpi
+```
+
+```{r cfa.mi.vs.cfa.si}
+anova(PTSD.cfa.mi, PTSD.cfa.si)
+# p 值為0.4508 > 0.05，表示強恆等性成立
+anova(PTSD.cfa.si, PTSD.cfa.allequal)
+# p 值為0.536 > 0.05，表示完全恆等性成立
+```
+
+```{r cfa.PD}
+PTSD.cfa.means <- cfa(PTSD.model, data = trauma,
+              estimator = "WLSMV",
+              group = "marriage",
+              group.equal = c("loadings", "intercepts", "residuals",
+                              "lv.variances", "lv.covariances","means"))
+fitMeasures(PTSD.cfa.means,
+            fit.measures = c("chisq", "df", "pvalue",
+                             "cfi", "tli", "rmsea", 
+                             "rmsea.pvalue", "srmr"))
+summary(PTSD.cfa.means, fit.measures = TRUE,
+        standardized = TRUE)
+
+
+ggsave("PTSD_marriage_means.png",  # 檔案名稱
+       plot = graph_sem(PTSD.cfa.means,layout = lay1),   
+       path = "D:/資料視覺化/期末報告", # 檔案路徑，不包含檔名
+       width = 21, # 圖片寬度
+       height = 9, # 圖片長度
+       dpi = 300) # dpi
+```
+
+
+```{r cfa.ci.vs.cfa.mi.vs.cfa.si}
+anova(PTSD.cfa.means, PTSD.cfa.allequal) 
+# p 值為0.2258 > 0.05，表示潛在變項平均數同質性成立
+# 也就是說，這個模型建構的潛在變項在不同家庭之下是可通用的
+# If this model does not fit the data well, then subsequent tests may be conducted to isolate specific group differences.
+```
+
+```{r fit}
+fit.all = data.frame(
+    fit.ci = round(c(fitMeasures(PTSD.cfa.ci,
+            fit.measures = c("chisq", "df", "pvalue",
+        "cfi", "tli", "rmsea","rmsea.pvalue", "srmr"))), digits = 4),
+    
+    fit.wi = round(c(fitMeasures(PTSD.cfa.mi,
+ fit.measures = c("chisq", "df", "pvalue", "cfi", "tli",
+                  "rmsea","rmsea.pvalue", "srmr"))), digits = 4),
+    
+ fit.si = round(c(fitMeasures(PTSD.cfa.si,
+    fit.measures = c("chisq", "df", "pvalue","cfi", "tli",
+                     "rmsea", "rmsea.pvalue", "srmr"))), digits = 4),
+ 
+ fit.allequal = round(c(fitMeasures(PTSD.cfa.allequal,
+    fit.measures = c("chisq", "df", "pvalue","cfi", "tli",
+                "rmsea","rmsea.pvalue", "srmr"))), digits = 4),
+ 
+ fit.means = round(c(fitMeasures(PTSD.cfa.means,
+    fit.measures = c("chisq", "df", "pvalue","cfi", "tli",
+                "rmsea","rmsea.pvalue", "srmr"))), digits = 4))
+fit.all.t <- t(fit.all)
+fit.all.t
+```
+
+
