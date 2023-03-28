@@ -1,0 +1,450 @@
+---
+title: "性別"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache=TRUE,
+                      autodep=TRUE, cache.comments=FALSE,
+                      message=FALSE, warning=FALSE)
+```
+
+## R Markdown
+
+
+```{r install.packages}
+# install.packages("tidySEM")
+# install.packages("lavaan")
+# install.packages("dplyr")
+library(tidySEM); library(lavaan); library(dplyr); library(ggplot2)
+library(psych) # for parallel analysis
+
+```
+
+```{r input data}
+library(haven)
+library(tidyverse)
+library(dplyr)
+library(car)
+#getwd()
+#setwd("C:/Users/qu32k/Desktop/R")
+data <- read.csv("C:/Users/qu32k/Desktop/R/trauma(1).csv", sep = ',' ,header = T)
+#View(data)
+sex <- subset(data,select=c(sex))
+ptsd <- subset(data, select=c(ptsd1, ptsd2,ptsd3,ptsd4,ptsd5,ptsd6,ptsd7,ptsd8,ptsd9,
+                                   ptsd10, ptsd11, ptsd12, ptsd13, ptsd14, ptsd15, ptsd16,
+                                   ptsd17, ptsd18, ptsd19, ptsd20, ptsd21))
+```
+
+```{r efa.PD}
+fa.parallel(ptsd, fa = "fa", fm = "ml")
+ptsd.efa <- fa(ptsd, nfactors = 4, rotate = "Promax",
+            residuals = TRUE, SMC = TRUE, fm = "pa")
+ptsd.efa$loadings
+fa.diagram(ptsd.efa)
+```
+
+```{r cfa.mardia}
+mardia(ptsd)
+```
+
+```{r cfa.PD}
+PTSD.model <- '
+    passive_attitude =~ ptsd10+ptsd11+ptsd14+ptsd19+ptsd21
+    physical_and_mental_symptom =~ ptsd1+ptsd4+ptsd7+ptsd8+ptsd9+ptsd12+ptsd13+ptsd15+ptsd16+ptsd17
+    repeated_experience =~ ptsd2+ptsd3+ptsd5+ptsd6+ptsd18+ptsd20
+'
+# the default for cfa is ML
+PTSD.cfa <- cfa(PTSD.model, data = ptsd,
+              estimator = "WLSMV")
+summary(PTSD.cfa, fit.measures = T,standardized = TRUE)
+
+lay1 <- get_layout("passive_attitude", "", "", "","","","","","","repeated_experience","","","","ptsd2","ptsd3","",
+"", "", "", "physical_and_mental_symptom", "", "","","", "","","","","ptsd5","ptsd6",
+"ptsd10", "ptsd11", "ptsd14", "ptsd19", "ptsd21","", "", "", "", "","","","","ptsd18","ptsd20",
+"", "", "","","", "ptsd1", "ptsd4", "ptsd7", "ptsd8", "ptsd9","ptsd12","ptsd13","ptsd15","ptsd16","ptsd17",rows = 4)
+
+```
+
+```{r cfa.ci}
+PTSD.model <- '
+    passive_attitude =~ ptsd10+ptsd11+ptsd14+ptsd19+ptsd21
+    physical_and_mental_symptom =~ ptsd1+ptsd4+ptsd7+ptsd8+ptsd9+ptsd12+ptsd13+ptsd15+ptsd16+ptsd17
+    repeated_experience =~ ptsd2+ptsd3+ptsd5+ptsd6+ptsd18+ptsd20
+'
+# the default for cfa is ML
+
+sex <- subset(data,select=c(sex))
+
+PTSD.cfa.ci <- cfa(PTSD.model, data = data,
+              estimator = "WLSMV",
+              group = "sex")
+summary(PTSD.cfa.ci, fit.measures = T,standardized = TRUE)
+
+
+
+```
+
+```{r cfa.allequal}
+PTSD.cfa.allequal <- cfa(PTSD.model, data = data,
+              estimator = "WLSMV",
+              group = "sex",
+              group.equal = c("loadings", "intercepts", "residuals",
+"lv.variances", "lv.covariances"))
+
+summary(PTSD.cfa.allequal, fit.measures = T,standardized = TRUE)
+
+anova(PTSD.cfa.ci, PTSD.cfa.allequal) 
+# p值為0.2964 > 0.05，表示構造恆等性成立。
+
+```
+
+```{r cfa.mi}
+PTSD.cfa.mi <- cfa(PTSD.model, data = data,
+              estimator = "WLSMV",
+              group = "sex",
+              group.equal = c("loadings"))
+fitMeasures(PTSD.cfa.mi,
+            fit.measures = c("chisq", "df", "pvalue",
+                             "cfi", "tli", "rmsea", 
+                             "rmsea.pvalue", "srmr"))
+summary(PTSD.cfa.mi, fit.measures = TRUE,
+        standardized = TRUE)
+
+
+
+```
+
+```{r cfa.ci.vs.cfa.mi}
+anova(PTSD.cfa.ci, PTSD.cfa.mi) 
+# p 值為0.2664 > 0.05，表示弱恆等性成立
+```
+
+```{r cfa.si}
+PTSD.cfa.si <- cfa(PTSD.model, data =data,
+              estimator = "WLSMV",
+              group = "sex",
+              group.equal = c("loadings", "intercepts"))
+fitMeasures(PTSD.cfa.si,
+            fit.measures = c("chisq", "df", "pvalue",
+                             "cfi", "tli", "rmsea", 
+                             "rmsea.pvalue", "srmr"))
+summary(PTSD.cfa.si, fit.measures = TRUE,
+        standardized = TRUE)
+
+```
+
+```{r cfa.mi.vs.cfa.si}
+anova(PTSD.cfa.mi, PTSD.cfa.si)
+# p 值為2.2e-16 *** < 0.05，表示強恆等性不成立(平均不可做)
+```
+
+```{r cfa.si.p}
+PTSD.cfa.si.p <- cfa(PTSD.model, data =data,
+              estimator = "WLSMV",
+              group = "sex",
+              group.equal = c("loadings", "intercepts"),
+              group.partial = "ptsd12 ~ 1")
+fitMeasures(PTSD.cfa.si.p,
+            fit.measures = c("chisq", "df", "pvalue",
+                             "cfi", "tli", "rmsea", 
+                             "rmsea.pvalue", "srmr"))
+summary(PTSD.cfa.si.p, fit.measures = TRUE,
+        standardized = TRUE)
+
+```
+
+```{r cfa.mi.vs.cfa.si.p}
+anova(PTSD.cfa.mi, PTSD.cfa.si.p)
+# p 值為6.054e-14 *** < 0.05，表示部分強恆等性「不」成立。
+```
+
+
+```{r cfa.si.p2}
+PTSD.cfa.si.p2 <- cfa(PTSD.model, data =data,
+              estimator = "WLSMV",
+              group = "sex",
+              group.equal = c("loadings", "intercepts"),
+              group.partial = c("ptsd12 ~ 1","ptsd19 ~ 1"))
+fitMeasures(PTSD.cfa.si.p2,
+            fit.measures = c("chisq", "df", "pvalue",
+                             "cfi", "tli", "rmsea", 
+                             "rmsea.pvalue", "srmr"))
+summary(PTSD.cfa.si.p2, fit.measures = TRUE,
+        standardized = TRUE)
+
+```
+
+```{r cfa.si.p.vs.cfa.si.p2}
+anova(PTSD.cfa.si.p, PTSD.cfa.si.p2)
+# p 值為1.355e-06 *** < 0.05，不同組別需要釋放兩個截距（兩個組別的這兩個指標變項的截距不同）
+```
+
+```{r cfa.si.p2.vs.cfa.si}
+anova(PTSD.cfa.si.p2, PTSD.cfa.si)
+# p 值為2.482e-11 *** < 0.05，不同組別需要釋放兩個截距（兩個組別的這兩個指標變項的截距不同），代表截距全部限制為相同的模型不夠好
+```
+
+```{r cfa.si.p2.vs.cfa.mi}
+anova(PTSD.cfa.si.p2, PTSD.cfa.mi)
+# p 值為1.492e-10 *** < 0.05 表示釋放兩個截距的部分強恆等性不成立。
+```
+
+```{r cfa.si.p3}
+PTSD.cfa.si.p3 <- cfa(PTSD.model, data =data,
+              estimator = "WLSMV",
+              group = "sex",
+              group.equal = c("loadings", "intercepts"),
+              group.partial = c("ptsd12 ~ 1","ptsd19 ~ 1","ptsd21 ~ 1"))
+fitMeasures(PTSD.cfa.si.p3,
+            fit.measures = c("chisq", "df", "pvalue",
+                             "cfi", "tli", "rmsea", 
+                             "rmsea.pvalue", "srmr"))
+summary(PTSD.cfa.si.p3, fit.measures = TRUE,
+        standardized = TRUE)
+
+```
+
+```{r cfa.si.p.vs.cfa.si.p2}
+anova(PTSD.cfa.si.p2, PTSD.cfa.si.p3)
+# p 值為1.945e-05 *** < 0.05，不同組別需要釋放三個截距
+```
+
+```{r cfa.si.p3.vs.cfa.si}
+anova(PTSD.cfa.si.p3, PTSD.cfa.si)
+# p 值為5.256e-14 *** < 0.05，不同組別需要釋放三個截距，代表截距全部限制為相同的模型不夠好
+```
+
+```{r cfa.si.p3.vs.cfa.mi}
+anova(PTSD.cfa.si.p3, PTSD.cfa.mi)
+# p 值為4.762e-08  *** < 0.05 表示釋放三個截距的部分強恆等性不成立。
+```
+```{r cfa.si.p4}
+PTSD.cfa.si.p4 <- cfa(PTSD.model, data =data,
+              estimator = "WLSMV",
+              group = "sex",
+              group.equal = c("loadings", "intercepts"),
+              group.partial = c("ptsd12 ~ 1","ptsd19 ~ 1","ptsd21 ~ 1","ptsd4 ~ 1"))
+fitMeasures(PTSD.cfa.si.p4,
+            fit.measures = c("chisq", "df", "pvalue",
+                             "cfi", "tli", "rmsea", 
+                             "rmsea.pvalue", "srmr"))
+summary(PTSD.cfa.si.p4, fit.measures = TRUE,
+        standardized = TRUE)
+
+```
+
+```{r cfa.si.p3.vs.cfa.si.p4}
+anova(PTSD.cfa.si.p3, PTSD.cfa.si.p4)
+# p 值為0.007161 *** < 0.05，不同組別需要釋放四個截距
+```
+```{r cfa.si.p4.vs.cfa.si}
+anova(PTSD.cfa.si.p4, PTSD.cfa.si)
+# p 值為1.798e-14 *** < 0.05，不同組別需要釋放四個截距，代表截距全部限制為相同的模型不夠好
+```
+
+```{r cfa.si.p4.vs.cfa.mi}
+anova(PTSD.cfa.si.p4, PTSD.cfa.mi)
+# p 值為3.413e-07  *** < 0.05 表示釋放四個截距的部分強恆等性不成立。
+```
+
+```{r cfa.si.p5}
+PTSD.cfa.si.p5 <- cfa(PTSD.model, data =data,
+              estimator = "WLSMV",
+              group = "sex",
+              group.equal = c("loadings", "intercepts"),
+              group.partial = c("ptsd12 ~ 1","ptsd19 ~ 1","ptsd21 ~ 1","ptsd4 ~ 1","ptsd15 ~ 1"))
+fitMeasures(PTSD.cfa.si.p5,
+            fit.measures = c("chisq", "df", "pvalue",
+                             "cfi", "tli", "rmsea", 
+                             "rmsea.pvalue", "srmr"))
+summary(PTSD.cfa.si.p5, fit.measures = TRUE,
+        standardized = TRUE)
+
+```
+
+```{r cfa.si.p4.vs.cfa.si.p5}
+anova(PTSD.cfa.si.p4, PTSD.cfa.si.p5)
+# p 值為 0.04376 *** < 0.05，不同組別需要釋放五個截距
+```
+```{r cfa.si.p5.vs.cfa.si}
+anova(PTSD.cfa.si.p5, PTSD.cfa.si)
+# p 值為2.57e-14 *** < 0.05，不同組別需要釋放五個截距，代表截距全部限制為相同的模型不夠好
+```
+```{r cfa.si.p5.vs.cfa.mi}
+anova(PTSD.cfa.si.p5, PTSD.cfa.mi)
+# p 值為6.272e-07  *** < 0.05 表示釋放五個截距的部分強恆等性不成立。
+```
+```{r cfa.si.p6}
+PTSD.cfa.si.p6 <- cfa(PTSD.model, data =data,
+              estimator = "WLSMV",
+              group = "sex",
+              group.equal = c("loadings", "intercepts"),
+              group.partial = c("ptsd12 ~ 1","ptsd19 ~ 1","ptsd21 ~ 1","ptsd4 ~ 1","ptsd15 ~ 1",
+                                "ptsd5 ~ 1"))
+fitMeasures(PTSD.cfa.si.p6,
+            fit.measures = c("chisq", "df", "pvalue",
+                             "cfi", "tli", "rmsea", 
+                             "rmsea.pvalue", "srmr"))
+summary(PTSD.cfa.si.p6, fit.measures = TRUE,
+        standardized = TRUE)
+
+```
+
+```{r cfa.si.p6.vs.cfa.si.p5}
+anova(PTSD.cfa.si.p6, PTSD.cfa.si.p5)
+# p 值為 0.01691 *** < 0.05，不同組別需要釋放六個截距
+```
+```{r cfa.si.p6.vs.cfa.si}
+anova(PTSD.cfa.si.p6, PTSD.cfa.si)
+# p 值為3.251e-15 *** < 0.05，不同組別需要釋放六個截距，代表截距全部限制為相同的模型不夠好
+```
+```{r cfa.si.p6.vs.cfa.mi}
+anova(PTSD.cfa.si.p6, PTSD.cfa.mi)
+# p 值為2.044e-06  *** < 0.05 表示釋放六個截距的部分強恆等性不成立。
+```
+
+```{r cfa.si.p7}
+PTSD.cfa.si.p7 <- cfa(PTSD.model, data =data,
+              estimator = "WLSMV",
+              group = "sex",
+              group.equal = c("loadings", "intercepts"),
+              group.partial = c("ptsd12 ~ 1","ptsd19 ~ 1","ptsd21 ~ 1","ptsd4 ~ 1","ptsd15 ~ 1",
+                                "ptsd5 ~ 1","ptsd16 ~ 1"))
+fitMeasures(PTSD.cfa.si.p7,
+            fit.measures = c("chisq", "df", "pvalue",
+                             "cfi", "tli", "rmsea", 
+                             "rmsea.pvalue", "srmr"))
+summary(PTSD.cfa.si.p7, fit.measures = TRUE,
+        standardized = TRUE)
+
+```
+
+```{r cfa.si.p7.vs.cfa.si.p6}
+anova(PTSD.cfa.si.p6, PTSD.cfa.si.p7)
+# p 值為 0.001935 *** < 0.05，不同組別需要釋放七個截距
+```
+
+```{r cfa.si.p7.vs.cfa.mi}
+anova(PTSD.cfa.si.p7, PTSD.cfa.mi)
+# p 值為3.257e-05  *** < 0.05 表示釋放七個截距的部分強恆等性不成立。
+```
+
+```{r cfa.si.p8}
+PTSD.cfa.si.p8 <- cfa(PTSD.model, data =data,
+              estimator = "WLSMV",
+              group = "sex",
+              group.equal = c("loadings", "intercepts"),
+              group.partial = c("ptsd12 ~ 1","ptsd19 ~ 1","ptsd21 ~ 1","ptsd4 ~ 1","ptsd15 ~ 1",
+                                "ptsd5 ~ 1","ptsd16 ~ 1","ptsd2 ~ 1"))
+fitMeasures(PTSD.cfa.si.p8,
+            fit.measures = c("chisq", "df", "pvalue",
+                             "cfi", "tli", "rmsea", 
+                             "rmsea.pvalue", "srmr"))
+summary(PTSD.cfa.si.p8, fit.measures = TRUE,
+        standardized = TRUE)
+
+```
+
+```{r cfa.si.p7.vs.cfa.si.p8}
+anova(PTSD.cfa.si.p8, PTSD.cfa.si.p7)
+# p 值為 5.63e-08 *** < 0.05，不同組別需要釋放七個截距
+```
+
+```{r cfa.si.p8.vs.cfa.mi}
+anova(PTSD.cfa.si.p8, PTSD.cfa.mi)
+# p 值為0.1253 > 0.05 表示釋放八個截距的部分強恆等性成立。
+```
+
+```{r cfa.sfi}
+PTSD.cfa.sfi <- cfa(PTSD.model, data =data,
+              estimator = "WLSMV",
+              group = "sex",
+              group.equal = c("loadings", "intercepts","residuals",
+                              "lv.variances", "lv.covariances"),
+              group.partial = c("ptsd12 ~ 1","ptsd19 ~ 1","ptsd21 ~ 1","ptsd4 ~ 1","ptsd15 ~ 1",
+                                "ptsd5 ~ 1","ptsd16 ~ 1","ptsd2 ~ 1"))
+fitMeasures(PTSD.cfa.sfi,
+            fit.measures = c("chisq", "df", "pvalue",
+                             "cfi", "tli", "rmsea", 
+                             "rmsea.pvalue", "srmr"))
+summary(PTSD.cfa.sfi, fit.measures = TRUE,
+        standardized = TRUE)
+ggsave("PTSD_sex_sfi.png",  # 檔案名稱
+       plot = graph_sem(PTSD.cfa.sfi,layout = lay1),   
+       path ="C:/Users/qu32k/Desktop/R", # 檔案路徑，不包含檔名
+       width = 21, # 圖片寬度
+       height = 9, # 圖片長度
+       dpi = 300) # dpi
+
+```
+
+```{r cfa.si.p8.vs.cfa.sfi}
+anova(PTSD.cfa.si.p8, PTSD.cfa.sfi)
+# p 值為0.557 > 0.05 表示部分完全恆等性成立。
+```
+
+```{r cfa.means}
+PTSD.cfa.means <- cfa(PTSD.model, data =data,
+              estimator = "WLSMV",
+              group = "sex",
+              group.equal = c("loadings", "intercepts","residuals",
+                              "lv.variances", "lv.covariances","means"),
+              group.partial = c("ptsd12 ~ 1","ptsd19 ~ 1","ptsd21 ~ 1","ptsd4 ~ 1","ptsd15 ~ 1",
+                                "ptsd5 ~ 1","ptsd16 ~ 1","ptsd2 ~ 1"))
+fitMeasures(PTSD.cfa.means,
+            fit.measures = c("chisq", "df", "pvalue",
+                             "cfi", "tli", "rmsea", 
+                             "rmsea.pvalue", "srmr"))
+summary(PTSD.cfa.means, fit.measures = TRUE,
+        standardized = TRUE)
+ggsave("PTSD_sex_cfa.mean.png",  # 檔案名稱
+       plot = graph_sem(PTSD.cfa.means,layout = lay1),   
+       path ="C:/Users/qu32k/Desktop/R", # 檔案路徑，不包含檔名
+       width = 21, # 圖片寬度
+       height = 9, # 圖片長度
+       dpi = 300) # dpi
+
+```
+
+```{r cfa.si.p8.vs.cfa.sfi}
+anova(PTSD.cfa.means, PTSD.cfa.sfi)
+# p 值為0.0003203 *** < 0.05 表示部分潛在變項平均數同質性不成立。
+# 這個模型建構的潛在變項是男女不可通用的。
+```
+
+```{r mimic.sex2}
+data$sex <- dplyr::recode(data$sex, "男" = 0, "女" = 1)
+#View(data)
+PTSD.model.sex <- ' 
+              # measurement model
+              passive_attitude =~ ptsd10+ptsd11+ptsd14+ptsd19+ptsd21
+              physical_and_mental_symptom =~ ptsd1+ptsd4+ptsd7+ptsd8+ptsd9+ptsd12+ptsd13+ptsd15+ptsd16+ptsd17
+              repeated_experience =~ ptsd2+ptsd3+ptsd5+ptsd6+ptsd18+ptsd20
+              # structural model
+              passive_attitude + physical_and_mental_symptom +  repeated_experience~ sex
+
+'
+PTSD.mimic.sex <- sem(PTSD.model.sex, data = data,
+                    estimator = "WLSMV")
+summary(PTSD.mimic.sex, fit.measures = T,standardized = T)
+
+graph_sem(PTSD.mimic.sex)
+library(xtable)
+#PTSD.mimic.sex.table <- xtable(parameterEstimates(PTSD.mimic.sex,
+#                                        standardized=TRUE)[,c(1:3,4:12)],
+ #                    caption="Example Table Made Using 
+ #                    \\texttt{xtable()} Function.")
+print(PTSD.mimic.sex.table, type = "html")
+```
+```{r mimic.sex.plot}
+install.packages('semPlot')
+library('semPlot')
+png("PTSD.mimic.png", width = 1920, height =1080)
+    semPaths(PTSD.mimic.sex, intercept = FALSE, whatLabel = "std",
+             residuals = FALSE, exoCov = FALSE,layout = "tree",rotation = 2
+             ,sizeMan = 3,sizeMan2 = 1.5, sizeLat =5,sizeLat2 = 4,
+             nCharNodes=40, label.prop=0.9, node.width = 3,edge.width = 0.5, 
+             edge.label.cex = 0.5,shapeMan = "rectangle", shapeLat = "ellipse")
+dev.off()
+```

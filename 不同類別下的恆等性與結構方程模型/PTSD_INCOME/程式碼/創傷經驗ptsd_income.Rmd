@@ -1,0 +1,335 @@
+---
+title: "創傷經驗量表ptsd"
+date: "2021-05-28"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache=TRUE,
+                      autodep=TRUE, cache.comments=FALSE,
+                      message=FALSE, warning=FALSE)
+```
+
+
+```{r install.packages}
+# install.packages("tidySEM")
+# install.packages("lavaan")
+# install.packages("dplyr")
+library(tidySEM); library(lavaan); library(dplyr); library(ggplot2)
+library(psych) # for parallel analysis
+```
+
+```{r input data}
+# 變數篩選
+library(haven)
+library(tidyverse)
+library(dplyr)
+library(car)
+data <- read_sav("C:/Users/映均/視覺化分析/資料變數解釋/data.sav")
+write.csv(data, file = "C:/Users/映均/視覺化分析/raw_data.csv")
+data <- read.csv("C:/Users/映均/視覺化分析/raw_data.csv", sep = ',' ,header = T)
+#view(data)
+trauma <- subset(data,select=c(sex,family,marriage,income,ptsd1, ptsd2,ptsd3,ptsd4,ptsd5,ptsd6,ptsd7,ptsd8,ptsd9,
+                                   ptsd10, ptsd11, ptsd12, ptsd13, ptsd14, ptsd15, ptsd16,
+                                   ptsd17, ptsd18, ptsd19, ptsd20, ptsd21))
+
+trauma$sex<- as.factor(trauma$sex)
+levels(trauma$sex) <- c("男", "女")
+
+trauma$family<- as.factor(trauma$family)
+levels(trauma$family) <- c("三代同堂", "核心家庭","大家庭","單親家庭","繼親家庭","隔代教養家庭","其他","錯誤值")
+
+trauma$marriage<- as.factor(trauma$marriage)
+levels(trauma$marriage) <- c("維持婚姻並同住", "維持婚姻但分居","離婚","寡居","再婚","其他","錯誤值")
+
+trauma$income<- as.factor(trauma$income)
+levels(trauma$income) <- c("2萬元(含)以下元", "2萬元以上-4萬元","4萬元以上-6萬元","6萬元以上-8萬元","8萬元以上-10萬元","10萬元以上","錯誤值")
+
+#View(trauma)
+
+trauma$ptsd1 <- car::recode(trauma$ptsd1, "8 = NA;9 = NA")
+trauma$ptsd2 <- car::recode(trauma$ptsd2, "8 = NA;9 = NA")
+trauma$ptsd3 <- car::recode(trauma$ptsd3, "8 = NA;9 = NA")
+trauma$ptsd4 <- car::recode(trauma$ptsd4, "8 = NA;9 = NA")
+trauma$ptsd5 <- car::recode(trauma$ptsd5, "8 = NA;9 = NA")
+trauma$ptsd6 <- car::recode(trauma$ptsd6, "8 = NA;9 = NA")
+trauma$ptsd7 <- car::recode(trauma$ptsd7, "8 = NA;9 = NA")
+trauma$ptsd8 <- car::recode(trauma$ptsd8, "8 = NA;9 = NA")
+trauma$ptsd9 <- car::recode(trauma$ptsd9, "8 = NA;9 = NA")
+trauma$ptsd10 <- car::recode(trauma$ptsd10, "8 = NA;9 = NA")
+trauma$ptsd11 <- car::recode(trauma$ptsd11, "8 = NA;9 = NA")
+trauma$ptsd12 <- car::recode(trauma$ptsd12, "8 = NA;9 = NA")
+trauma$ptsd13 <- car::recode(trauma$ptsd13, "8 = NA;9 = NA")
+trauma$ptsd14 <- car::recode(trauma$ptsd14, "8 = NA;9 = NA")
+trauma$ptsd15 <- car::recode(trauma$ptsd15, "8 = NA;9 = NA")
+trauma$ptsd16 <- car::recode(trauma$ptsd16, "8 = NA;9 = NA")
+trauma$ptsd17 <- car::recode(trauma$ptsd17, "8 = NA;9 = NA")
+trauma$ptsd18 <- car::recode(trauma$ptsd18, "8 = NA;9 = NA")
+trauma$ptsd19 <- car::recode(trauma$ptsd19, "8 = NA;9 = NA")
+trauma$ptsd20 <- car::recode(trauma$ptsd20, "8 = NA;9 = NA")
+trauma$ptsd21 <- car::recode(trauma$ptsd21, "8 = NA;9 = NA")
+### 刪除錯誤值與其他
+trauma <- subset(trauma,trauma$family!='錯誤值'&trauma$family!='其他
+                 '&trauma$marriage!='錯誤值'&trauma$marriage!='其他'
+                 &trauma$income!='錯誤值')
+
+#View(trauma)
+write.csv(trauma,file="trauma.csv",row.names = F)
+ptsd <- subset(trauma, select=c(ptsd1, ptsd2,ptsd3,ptsd4,ptsd5,ptsd6,ptsd7,ptsd8,ptsd9,
+                                   ptsd10, ptsd11, ptsd12, ptsd13, ptsd14, ptsd15, ptsd16,
+                                   ptsd17, ptsd18, ptsd19, ptsd20, ptsd21))
+
+```
+
+```{r efa.PD}
+fa.parallel(ptsd, fa = "fa", fm = "ml")
+png("PTSD.parallel.png", width = 1000, height = 600)
+   fa.parallel(ptsd, fa = "fa", fm = "ml")
+dev.off()
+ptsd.efa <- fa(ptsd, nfactors = 4, rotate = "Promax",
+            residuals = TRUE, SMC = TRUE, fm = "pa")
+ptsd.efa$loadings
+fa.diagram(ptsd.efa)
+png("PTSD.efa.png", width = 1000, height = 600)
+   fa.diagram(ptsd.efa)
+dev.off()
+
+```
+
+
+```{r cfa.mardia}
+mardia(ptsd)
+png("PTSD.normal.png", width = 1000, height = 600)
+   mardia(ptsd)
+dev.off()
+```
+
+
+```{r cfa.PD}
+PTSD.model <- '
+    passive_attitude =~ ptsd10+ptsd11+ptsd14+ptsd19+ptsd21
+    physical_and_mental_symptom =~ ptsd1+ptsd4+ptsd7+ptsd8+ptsd9+ptsd12+ptsd13+ptsd15+ptsd16+ptsd17
+    repeated_experience =~ ptsd2+ptsd3+ptsd5+ptsd6+ptsd18+ptsd20
+'
+PTSD.cfa <- cfa(PTSD.model, data = ptsd,
+              estimator = "WLSMV")
+fitMeasures(PTSD.cfa,
+            fit.measures = c("chisq", "df", "pvalue",
+                             "cfi", "tli", "rmsea", 
+                             "rmsea.pvalue", "srmr"))
+summary(PTSD.cfa, fit.measures = T,standardized = TRUE)
+
+library(semPlot)
+png("PTSD_income.png", width = 1920, height =1080)
+    semPaths(PTSD.cfa, intercept = FALSE, whatLabel = "std",
+             residuals = FALSE, exoCov = FALSE,layout = "tree",rotation = 2
+             ,sizeMan = 3,sizeMan2 = 1.5, sizeLat =5,sizeLat2 = 4,
+             nCharNodes=40, label.prop=0.9, node.width = 3,edge.width = 0.5, 
+             edge.label.cex = 0.5,shapeMan = "rectangle", shapeLat = "ellipse")
+dev.off()
+# RMSEA: 0.052 模型還可以
+# -value RMSEA <= 0.05   0.173 接受RMSEA<=0.05
+# CFI:0.983 模型夠好
+# TLI:0.980 模型夠好
+# 用這個模型繼續做恆等性分析
+```
+```{r cfa.ci}
+PTSD.model <- '
+    passive_attitude =~ ptsd10+ptsd11+ptsd14+ptsd19+ptsd21
+    physical_and_mental_symptom =~ ptsd1+ptsd4+ptsd7+ptsd8+ptsd9+ptsd12+ptsd13+ptsd15+ptsd16+ptsd17
+    repeated_experience =~ ptsd2+ptsd3+ptsd5+ptsd6+ptsd18+ptsd20
+'
+
+PTSD.cfa.ci <- cfa(PTSD.model, data = trauma,
+              estimator = "WLSMV",
+              group = "income")
+fitMeasures(PTSD.cfa.ci,
+            fit.measures = c("chisq", "df", "pvalue",
+                             "cfi", "tli", "rmsea", 
+                             "rmsea.pvalue", "srmr"))
+summary(PTSD.cfa.ci, fit.measures = T,standardized = TRUE)
+fitMeasures(PTSD.cfa.ci,
+                                 fit.measures = c("chisq", "df", "pvalue",
+                                                  "cfi", "tli", "rmsea",
+                                                  "rmsea.pvalue", "srmr"))
+
+png("PTSD_income_ci%d.png", width = 1920, height =1080)
+semPaths(PTSD.cfa.ci, intercept = T
+             , whatLabel = "std",
+             residuals = T, exoCov = FALSE,layout = "tree",rotation = 2
+             ,sizeMan = 3,sizeMan2 = 1.5, sizeLat =5,sizeLat2 = 4, sizeInt = 0.5,
+             nCharNodes=40, label.prop=0.9, node.width = 3,edge.width = 0.5, 
+             edge.label.cex = 0.5,shapeMan = "rectangle", shapeLat = "ellipse")
+dev.off()
+
+# RMSEA: 0.029 模型很好
+# CFI:0.995 模型夠好
+# TLI:0.994 模型夠好
+# 適配度夠好，滿足結構恆等性
+```
+```{r cfa.allequal}
+PTSD.cfa.allequal <- cfa(PTSD.model, data = trauma,
+              estimator = "WLSMV",
+              group = "income",
+              group.equal = c("loadings", "intercepts", "residuals",
+"lv.variances", "lv.covariances"))
+fitMeasures(PTSD.cfa.allequal,
+                                 fit.measures = c("chisq", "df", "pvalue",
+                                                  "cfi", "tli", "rmsea",
+                                                  "rmsea.pvalue", "srmr"))
+
+summary(PTSD.cfa.allequal, fit.measures = T,standardized = TRUE)
+
+
+
+```
+
+
+
+```{r cfa.mi}
+PTSD.cfa.mi <- cfa(PTSD.model, data = trauma,
+              estimator = "WLSMV",
+              group = "income",
+              group.equal = c("loadings"))
+fitMeasures(PTSD.cfa.mi,
+            fit.measures = c("chisq", "df", "pvalue",
+                             "cfi", "tli", "rmsea", 
+                             "rmsea.pvalue", "srmr"))
+summary(PTSD.cfa.mi, fit.measures = TRUE,
+        standardized = TRUE)
+
+```
+
+```{r cfa.ci.vs.cfa.mi}
+anova(PTSD.cfa.ci, PTSD.cfa.mi) 
+# p 值為0.4407 > 0.05，表示弱恆等性成立
+
+round(fitMeasures(PTSD.cfa.ci)[names = c("cfi", "tli")] - fitMeasures(PTSD.cfa.mi)[names = c("cfi", "tli")], 3)
+#  cfi跟tli均相差0.005 < 0.01，表示弱恆等性成立
+```
+
+
+```{r cfa.si}
+PTSD.cfa.si <- cfa(PTSD.model, data = trauma,
+              estimator = "WLSMV",
+              group = "income",
+              group.equal = c("loadings", "intercepts"))
+fitMeasures(PTSD.cfa.si,
+            fit.measures = c("chisq", "df", "pvalue",
+                             "cfi", "tli", "rmsea", 
+                             "rmsea.pvalue", "srmr"))
+summary(PTSD.cfa.si, fit.measures = TRUE,
+        standardized = TRUE)
+
+
+```
+
+```{r cfa.mi.vs.cfa.si}
+anova(PTSD.cfa.mi, PTSD.cfa.si)
+# p 值為0.2343 > 0.05，表示強恆等性成立
+```
+
+```{r cfa.allequal.vs.cfa.si}
+anova(PTSD.cfa.si, PTSD.cfa.allequal)
+# p 值為 0.2122 > 0.05，表示完全恆等性成立
+```
+
+```{r cfa.means}
+PTSD.cfa.means <- cfa(PTSD.model, data = trauma,
+              estimator = "WLSMV",
+              group = "income",
+              group.equal = c("loadings", "intercepts", "residuals",
+                              "lv.variances", "lv.covariances","means"))
+fitMeasures(PTSD.cfa.means,
+            fit.measures = c("chisq", "df", "pvalue",
+                             "cfi", "tli", "rmsea", 
+                             "rmsea.pvalue", "srmr"))
+summary(PTSD.cfa.means, fit.measures = TRUE,
+        standardized = TRUE)
+
+```
+```{r cfa.means.vs.cfa.allequal}
+anova(PTSD.cfa.means, PTSD.cfa.allequal)
+# p 值為0.07456   > 0.05 表示部分潛在變項平均數同質性成立。
+# 這個模型建構的潛在變項是男女可通用的。
+```
+
+
+
+
+```{r fit}
+fit.all = data.frame(
+    fit.ci = round(c(fitMeasures(PTSD.cfa.ci,
+                                 fit.measures = c("chisq", "df", "pvalue",
+                                                  "cfi", "tli", "rmsea",
+                                                  "rmsea.pvalue", "srmr"))), digits = 4),
+    fit.mi = round(c(fitMeasures(PTSD.cfa.mi,
+                                 fit.measures = c("chisq", "df", "pvalue",
+                                                  "cfi", "tli", "rmsea",
+                                                  "rmsea.pvalue", "srmr"))), digits = 4),
+    fit.si = round(c(fitMeasures(PTSD.cfa.si,
+                                 fit.measures = c("chisq", "df", "pvalue",
+                                                  "cfi", "tli", "rmsea",
+                                                  "rmsea.pvalue", "srmr"))), digits = 4),
+    fit.means = round(c(fitMeasures(PTSD.cfa.means,
+                                    fit.measures = c("chisq", "df", "pvalue",
+                                                     "cfi", "tli", "rmsea","rmsea.pvalue", "srmr"))), digits = 4))
+fit.all.t <- t(fit.all)
+fit.all.t
+```
+
+```{r mimic.income1}
+
+trauma1 <- within(trauma,{
+        income<-dplyr::recode(trauma$income,"2萬元(含)以下元"=0,"2萬元以上-4萬元"=1,"4萬元以上-6萬元"=2,"6萬元以上-8萬元"=3,"8萬元以上-10萬元"=4,"10萬元以上"=5)
+})
+
+PTSD.model.income <- ' 
+              # measurement model
+              passive_attitude =~ ptsd10+ptsd11+ptsd14+ptsd19+ptsd21
+              physical_and_mental_symptom =~ ptsd1+ptsd4+ptsd7+ptsd8+ptsd9+ptsd12+ptsd13+ptsd15+ptsd16+ptsd17
+              repeated_experience =~ ptsd2+ptsd3+ptsd5+ptsd6+ptsd18+ptsd20
+              # structural model
+              passive_attitude+physical_and_mental_symptom+repeated_experience ~ income
+'
+PTSD.mimic.income <- sem(PTSD.model.income, data = trauma1,
+                    estimator = "WLSMV")
+
+fitMeasures(PTSD.mimic.income,
+                                 fit.measures = c("chisq", "df", "pvalue",
+                                                  "cfi", "tli", "rmsea",
+                                                  "rmsea.pvalue", "srmr"))
+summary(PTSD.mimic.income, fit.measures = TRUE)
+
+
+# 繪製結構模型圖
+png("PTSD.mimic.structural.png", width = 1920, height = 1080)
+    semPaths(PTSD.mimic.income, intercept = FALSE, whatLabel = "std",
+             residuals = FALSE,layout = "circle", sizeMan = 8, 
+             sizeInt = 12, sizeLat = 12,sizeLat2 = 12,nCharNodes=40, structural=TRUE,
+         label.prop=0.9, node.width = 3,edge.width = 0.5, edge.label.cex = 1,shapeMan = "rectangle", shapeLat = "ellipse")
+dev.off()
+
+# 繪製變數之間的路徑圖
+png("PTSD.mimic.png", width = 1920, height =1080)
+    semPaths(PTSD.mimic.income, intercept = FALSE, whatLabel = "std",
+             residuals = FALSE, exoCov = FALSE,layout = "tree",rotation = 2
+             ,sizeMan = 3,sizeMan2 = 1.5, sizeLat =5,sizeLat2 = 4,
+             nCharNodes=40, label.prop=0.9, node.width = 3,edge.width = 0.5, 
+             edge.label.cex = 0.5,shapeMan = "rectangle", shapeLat = "ellipse")
+dev.off()
+
+```
+
+
+
+
+```{r mimic.income1}
+library(xtable)
+PTSD.mimic.income.table <- xtable(parameterEstimates(PTSD.mimic.income,
+                                        standardized=TRUE)[,c(1:3,4:12)],
+                     caption="Example Table Made Using 
+                     \\texttt{xtable()} Function.")
+print(PTSD.mimic.income.table, type = "html")
+```
+
